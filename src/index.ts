@@ -10,6 +10,40 @@ async function main() {
 }
 
 /**
+ * 現在の日時を様々な形式で取得する
+ * @returns 様々な形式の現在の日時情報
+ */
+function getCurrentDateTime() {
+  const now = new Date();
+  
+  // 日付のフォーマット (YYYY-MM-DD)
+  const dateFormat = now.toISOString().split('T')[0];
+  
+  // 時刻のフォーマット (HH:MM)
+  const timeFormat = now.toTimeString().substring(0, 5);
+  
+  // 曜日の取得 (日本語)
+  const weekdays = ['日', '月', '火', '水', '木', '金', '土'];
+  const weekday = weekdays[now.getDay()];
+  
+  // 日本語の日付形式
+  const jpDateFormat = `${now.getFullYear()}年${now.getMonth() + 1}月${now.getDate()}日(${weekday})`;
+  
+  // タイムスタンプ (Unix time)
+  const timestamp = Math.floor(now.getTime() / 1000);
+  
+  return {
+    iso: now.toISOString(),
+    date: dateFormat,
+    time: timeFormat,
+    dateTime: `${dateFormat} ${timeFormat}`,
+    jpDate: jpDateFormat,
+    timestamp: timestamp,
+    weekday: weekday
+  };
+}
+
+/**
  * MCPサーバーを起動
  */
 function startServer() {
@@ -47,6 +81,50 @@ function startServer() {
     },
     execute: async (args: { text: string }) => {
       return { content: [{ type: "text", text: args.text.length.toString() }] };
+    }
+  });
+
+  // 現在の日時を取得するツールを登録
+  server.registerTool({
+    name: 'get_current_datetime',
+    description: '現在の日時を様々な形式で取得するツール',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        format: {
+          type: 'string',
+          description: '取得する形式（iso, date, time, dateTime, jpDate, timestamp, weekday, all）デフォルトは all'
+        }
+      }
+    },
+    execute: async (args: { format?: string }) => {
+      const dateTimeInfo = getCurrentDateTime();
+      
+      // 要求された形式の日時情報を返す
+      const format = args.format || 'all';
+      let result: any = {};
+      
+      if (format === 'all') {
+        result = dateTimeInfo;
+      } else if (dateTimeInfo[format as keyof typeof dateTimeInfo] !== undefined) {
+        result[format] = dateTimeInfo[format as keyof typeof dateTimeInfo];
+      } else {
+        return { 
+          content: [{ 
+            type: "text", 
+            text: `エラー: 不明な形式「${format}」が指定されました。利用可能な形式: iso, date, time, dateTime, jpDate, timestamp, weekday, all` 
+          }]
+        };
+      }
+      
+      return {
+        content: [
+          { 
+            type: "text", 
+            text: "## 現在の日時情報\n\n```json\n" + JSON.stringify(result, null, 2) + "\n```" 
+          }
+        ]
+      };
     }
   });
 
