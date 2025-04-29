@@ -81,40 +81,39 @@ function startServer() {
     }
   });
 
-  // スケジュール生成ツールを登録
+  // スケジュール生成ツールを登録（シンプル化バージョン）
   server.registerTool({
     name: 'schedule_generator',
-    description: 'アクションプランからGoogleカレンダーにインポート可能なスケジュールを生成するツール',
+    description: 'アクションプランをGoogleカレンダーにインポート可能なiCalendar形式に変換するツール',
     inputSchema: {
       type: 'object',
       properties: {
-        actions: {
-          type: 'array',
-          description: 'アクションプランのリスト',
-          items: {
-            type: 'string'
-          }
-        },
-        startDate: {
+        title: {
           type: 'string',
-          description: '開始日（YYYY-MM-DD形式、オプション）'
+          description: 'イベントのタイトル'
+        },
+        date: {
+          type: 'string',
+          description: 'イベントの日付（YYYY-MM-DD形式）'
+        },
+        description: {
+          type: 'string',
+          description: 'イベントの説明（オプション）'
         }
       },
-      required: ['actions']
+      required: ['title', 'date']
     },
-    execute: async (args: { actions: string[], startDate?: string }) => {
-      // 開始日が指定されている場合は変換
-      let startDateObj: Date | undefined = undefined;
-      if (args.startDate) {
-        startDateObj = new Date(args.startDate);
-      }
-      
-      // モック実装を使用
-      const actionSchedule = generateMockSchedule(args.actions, startDateObj);
+    execute: async (args: { title: string, date: string, description?: string }) => {
+      // iCalendar形式に変換
+      const icalContent = generateMockSchedule(args.title, args.date, args.description);
       
       return {
         content: [
-          { type: "text", text: "## アクションスケジュール（iCalendar形式）\n\n" + actionSchedule }
+          { type: "text", text: "## Googleカレンダー登録用iCalendarデータ\n\n```\n" + icalContent + "\n```" },
+          { 
+            type: "text", 
+            text: "\n\n## 使い方\n\n1. 上記のテキストをコピーして、.icsファイルとして保存\n2. Googleカレンダーで「その他のカレンダー」の+ボタン→「インポート」を選択\n3. 作成した.icsファイルをアップロード" 
+          }
         ]
       };
     }

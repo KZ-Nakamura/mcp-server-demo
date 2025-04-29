@@ -1,70 +1,84 @@
 /**
- * スケジュール生成用のプロンプトテンプレート
+ * スケジュール生成モジュール
  */
 
 /**
- * スケジュール生成のためのプロンプトテンプレート
- * @param actions アクションプランのリスト 
- * @param startDate 開始日（オプション）
- * @returns テンプレート文字列
+ * イベント情報の型定義
  */
-export function getScheduleGeneratorPrompt(actions: string[], startDate?: Date): string {
-  const start = startDate || new Date(Date.now() + 24 * 60 * 60 * 1000); // デフォルトは明日
-  
-  return `
-あなたはアクションプランを効果的なスケジュールに変換する専門家です。
-以下のアクションステップを分析し、現実的な時間枠で実行できるスケジュールを作成してください。
-
-## アクションステップ
-${actions.join('\n')}
-
-## 開始日
-${start.toISOString().split('T')[0]}
-
-## 指示
-- アクションステップの難易度と依存関係を考慮してスケジュールを組んでください
-- 各アクションに対して、適切な所要時間（時間単位）を設定してください
-- 平日は1日最大4時間、週末は1日最大6時間の作業を想定してください
-- カレンダーに登録できるiCalendar形式のスケジュールを生成してください
-
-## 出力形式
-iCalendar形式のスケジュールのみを出力してください。余計な説明は不要です。
-`.trim();
+export interface CalendarEvent {
+  title: string;
+  date: string; // YYYY-MM-DD形式
+  startTime: string; // HH:MM形式 
+  endTime: string; // HH:MM形式
+  location?: string;
+  description?: string;
 }
 
 /**
- * モック用のスケジュールを生成
- * @param actions アクションプランのリスト
- * @param startDate 開始日（オプション） 
+ * GoogleカレンダーでインポートできるiCalendar形式に変換
+ * @param event イベント情報
+ * @returns iCalendar形式のテキスト
+ */
+export function generateICalendar(event: CalendarEvent): string {
+  // 日付と時間をiCalendar形式に変換
+  const dtStart = formatDateTimeToICalendar(event.date, event.startTime);
+  const dtEnd = formatDateTimeToICalendar(event.date, event.endTime);
+  const now = formatDateTimeToICalendar(new Date().toISOString().split('T')[0], 
+    new Date().toTimeString().split(' ')[0].substring(0, 5));
+  
+  // ユニークIDの生成
+  const uid = `${Date.now()}@mcpserver`;
+  
+  return `BEGIN:VCALENDAR
+VERSION:2.0
+PRODID:-//MCP Server//NONSGML Event Generator//JA
+CALSCALE:GREGORIAN
+METHOD:PUBLISH
+BEGIN:VEVENT
+UID:${uid}
+DTSTAMP:${now}
+DTSTART:${dtStart}
+DTEND:${dtEnd}
+SUMMARY:${event.title}
+${event.location ? `LOCATION:${event.location}` : ''}
+${event.description ? `DESCRIPTION:${event.description}` : ''}
+END:VEVENT
+END:VCALENDAR`;
+}
+
+/**
+ * 日付と時間をiCalendar形式に変換する
+ * @param date YYYY-MM-DD形式の日付
+ * @param time HH:MM形式の時間
+ * @returns iCalendar形式の日時文字列
+ */
+function formatDateTimeToICalendar(date: string, time: string): string {
+  // スペースや区切り文字を削除
+  const cleanDate = date.replace(/[-:]/g, '');
+  const cleanTime = time.replace(/[-:]/g, '');
+  
+  // YYYYMMDDTHHMMSSZ 形式に変換
+  return `${cleanDate}T${cleanTime}00Z`;
+}
+
+/**
+ * モック用のスケジュール生成関数
+ * アイディアプランナーからの出力を受け取ってiCalendar形式に変換
+ * @param title イベントのタイトル
+ * @param actionDate イベントの日付 (YYYY-MM-DD形式)
+ * @param description 説明文（オプション）
  * @returns iCalendar形式の文字列
  */
-export function generateMockSchedule(actions: string[], startDate?: Date): string {
-  // 実際の実装では、LLMを使ってアクションに基づいて適切なスケジューリングを行う
-  const now = new Date();
-  const start = startDate || new Date(now);
-  start.setDate(start.getDate() + 1); // デフォルトは明日から開始
+export function generateMockSchedule(title: string, actionDate: string, description?: string): string {
+  // デフォルト値を設定
+  const event: CalendarEvent = {
+    title: title,
+    date: actionDate,
+    startTime: "14:00",
+    endTime: "16:00",
+    location: "オフィス",
+    description: description || "自動生成されたイベント"
+  };
   
-  const icalContent = `BEGIN:VCALENDAR
-VERSION:2.0
-PRODID:-//MCP Server//NONSGML Idea Planner//JA
-${actions.map((action, index) => {
-  const eventDate = new Date(start);
-  eventDate.setDate(eventDate.getDate() + index); // 1日ずつずらす
-  
-  const dateStr = eventDate.toISOString().replace(/[-:]/g, '').split('.')[0] + 'Z';
-  const dateEnd = new Date(eventDate);
-  dateEnd.setHours(dateEnd.getHours() + 2); // 各タスク2時間と仮定
-  const dateEndStr = dateEnd.toISOString().replace(/[-:]/g, '').split('.')[0] + 'Z';
-  
-  return `BEGIN:VEVENT
-UID:${Date.now()}${index}@mcpserver
-DTSTAMP:${dateStr}
-DTSTART:${dateStr}
-DTEND:${dateEndStr}
-SUMMARY:${action}
-END:VEVENT`;
-}).join('\n')}
-END:VCALENDAR`;
-
-  return icalContent;
+  return generateICalendar(event);
 } 
