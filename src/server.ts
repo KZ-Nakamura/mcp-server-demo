@@ -1,5 +1,5 @@
 import { Transport } from './transport.js';
-import { Protocol } from './protocol';
+import { Protocol } from './protocol.js';
 
 /**
  * サーバー初期化パラメータ

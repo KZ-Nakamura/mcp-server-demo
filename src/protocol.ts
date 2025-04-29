@@ -1,4 +1,4 @@
-import { JsonRpcRequest, JsonRpcResponse } from "./types";
+import { JsonRpcRequest, JsonRpcResponse } from "./types.js";
 
 /**
  * MCPプロトコル実装
