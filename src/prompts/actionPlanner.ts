@@ -24,6 +24,10 @@ export function getActionPlanPrompt(idea: string, context?: string, currentDateT
 必要に応じてRejectを行い、次に取るべき行動（Next Action）とそのスケジュールを設計してください。
 その際、必ず以下の出力形式に厳密に従ってください。
 
+## あなたがやること
+- 出力形式に厳密に従って出力
+- 出力形式を受けてschedule_generatorを実行
+
 
 ## 出力形式
 【意思決定結果】
