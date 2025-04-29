@@ -50,10 +50,10 @@ function startServer() {
     }
   });
 
-  // アイディアプランナーツールを登録
+  // アイディアプランナーツール（アクションプラン生成のみ）を登録
   server.registerTool({
     name: 'idea_planner',
-    description: 'ユーザーのアイディアからアクションプランとスケジュールを生成するツール',
+    description: 'ユーザーのアイディアから実行可能なアクションプランを生成するツール',
     inputSchema: {
       type: 'object',
       properties: {
@@ -71,12 +71,53 @@ function startServer() {
     execute: async (args: { idea: string, context?: string }) => {
       // モック実装を使用
       const actionPlan = generateMockActionPlan(args.idea, args.context);
-      const actionSchedule = generateMockSchedule(actionPlan);
       
       return {
         content: [
-          { type: "text", text: "## アクションプラン\n\n" + actionPlan.join("\n") },
-          { type: "text", text: "\n\n## アクションスケジュール（iCalendar形式）\n\n" + actionSchedule }
+          { type: "text", text: "## アクションプラン\n\n" + actionPlan.join("\n") }
+        ],
+        // 後続処理のためにアクションプランをデータとして返す
+        data: {
+          actionPlan: actionPlan
+        }
+      };
+    }
+  });
+
+  // スケジュール生成ツールを登録
+  server.registerTool({
+    name: 'schedule_generator',
+    description: 'アクションプランからGoogleカレンダーにインポート可能なスケジュールを生成するツール',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        actions: {
+          type: 'array',
+          description: 'アクションプランのリスト',
+          items: {
+            type: 'string'
+          }
+        },
+        startDate: {
+          type: 'string',
+          description: '開始日（YYYY-MM-DD形式、オプション）'
+        }
+      },
+      required: ['actions']
+    },
+    execute: async (args: { actions: string[], startDate?: string }) => {
+      // 開始日が指定されている場合は変換
+      let startDateObj: Date | undefined = undefined;
+      if (args.startDate) {
+        startDateObj = new Date(args.startDate);
+      }
+      
+      // モック実装を使用
+      const actionSchedule = generateMockSchedule(args.actions, startDateObj);
+      
+      return {
+        content: [
+          { type: "text", text: "## アクションスケジュール（iCalendar形式）\n\n" + actionSchedule }
         ]
       };
     }
