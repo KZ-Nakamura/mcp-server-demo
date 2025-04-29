@@ -1,7 +1,7 @@
 import { Logger } from './logger.js';
 import { Server } from './server.js';
 import { Stdio } from './stdio.js';
-import { generateMockActionPlan } from './prompts/actionPlanner.js';
+import { generateMockActionPlan, getActionPlanPrompt } from './prompts/actionPlanner.js';
 import { generateMockSchedule } from './prompts/scheduleGenerator.js';
 
 async function main() {
@@ -50,10 +50,10 @@ function startServer() {
     }
   });
 
-  // アイディアプランナーツール（アクションプラン生成のみ）を登録
+  // アイディアプランナーツール（プロンプト生成）を登録
   server.registerTool({
     name: 'idea_planner',
-    description: 'ユーザーのアイディアから実行可能なアクションプランを生成するツール',
+    description: 'ユーザーのアイディアからアクションプランを生成するためのプロンプトを生成するツール',
     inputSchema: {
       type: 'object',
       properties: {
@@ -69,17 +69,14 @@ function startServer() {
       required: ['idea']
     },
     execute: async (args: { idea: string, context?: string }) => {
-      // モック実装を使用
-      const actionPlan = generateMockActionPlan(args.idea, args.context);
+      // プロンプトテンプレートを取得（コメントアウトを切り替えて使い分け可能）
+      const prompt = getActionPlanPrompt(args.idea, args.context);
+      // const prompt = generateMockActionPlan(args.idea, args.context).join("\n");
       
       return {
         content: [
-          { type: "text", text: "## アクションプラン\n\n" + actionPlan.join("\n") }
-        ],
-        // 後続処理のためにアクションプランをデータとして返す
-        data: {
-          actionPlan: actionPlan
-        }
+          { type: "text", text: "## 以下のプロンプトを実行してください\n\n```\n" + prompt + "\n```" }
+        ]
       };
     }
   });
