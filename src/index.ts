@@ -84,49 +84,7 @@ function startServer() {
     }
   });
 
-  // 現在の日時を取得するツールを登録
-  server.registerTool({
-    name: 'get_current_datetime',
-    description: '現在の日時を様々な形式で取得するツール',
-    inputSchema: {
-      type: 'object',
-      properties: {
-        format: {
-          type: 'string',
-          description: '取得する形式（iso, date, time, dateTime, jpDate, timestamp, weekday, all）デフォルトは all'
-        }
-      }
-    },
-    execute: async (args: { format?: string }) => {
-      const dateTimeInfo = getCurrentDateTime();
-      
-      // 要求された形式の日時情報を返す
-      const format = args.format || 'all';
-      let result: any = {};
-      
-      if (format === 'all') {
-        result = dateTimeInfo;
-      } else if (dateTimeInfo[format as keyof typeof dateTimeInfo] !== undefined) {
-        result[format] = dateTimeInfo[format as keyof typeof dateTimeInfo];
-      } else {
-        return { 
-          content: [{ 
-            type: "text", 
-            text: `エラー: 不明な形式「${format}」が指定されました。利用可能な形式: iso, date, time, dateTime, jpDate, timestamp, weekday, all` 
-          }]
-        };
-      }
-      
-      return {
-        content: [
-          { 
-            type: "text", 
-            text: "## 現在の日時情報\n\n```json\n" + JSON.stringify(result, null, 2) + "\n```" 
-          }
-        ]
-      };
-    }
-  });
+
 
   // アイディアプランナーツール（プロンプト生成）を登録
   server.registerTool({
@@ -147,13 +105,24 @@ function startServer() {
       required: ['idea']
     },
     execute: async (args: { idea: string, context?: string }) => {
-      // プロンプトテンプレートを取得（コメントアウトを切り替えて使い分け可能）
-      const prompt = getActionPlanPrompt(args.idea, args.context);
-      // const prompt = generateMockActionPlan(args.idea, args.context).join("\n");
+      // 現在の日時情報を取得
+      const dateTimeInfo = getCurrentDateTime();
+      
+      Logger.info("日時情報: " + JSON.stringify(dateTimeInfo));
+      
+      // プロンプトテンプレートを取得
+      const prompt = getActionPlanPrompt(args.idea, args.context || "", dateTimeInfo);
+      
+      // 実行時間の日本語表示
+      const timeDisplay = `${dateTimeInfo.jpDate} ${dateTimeInfo.time} (${dateTimeInfo.weekday}曜日)`;
       
       return {
         content: [
-          { type: "text", text: "## 以下のプロンプトを実行してください\n\n```\n" + prompt + "\n```" }
+          { 
+            type: "text", 
+            text: "## 以下のプロンプトを実行してください\n\n```\n" + prompt + "\n```\n\n" +
+                 "## 使用した日時情報\n\n" + timeDisplay
+          }
         ]
       };
     }

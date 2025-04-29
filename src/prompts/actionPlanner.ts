@@ -6,15 +6,24 @@
  * アクションプランを生成するためのプロンプトテンプレート
  * @param idea ユーザーのアイディア
  * @param context コンテキスト情報（オプション）
+ * @param currentDateTime 現在の日時情報（オプション）
  * @returns テンプレート文字列
  */
-export function getActionPlanPrompt(idea: string, context?: string): string {
+export function getActionPlanPrompt(idea: string, context?: string, currentDateTime?: any): string {
+  // 日時情報の整形
+  const dateTimeInfo = currentDateTime ? 
+    `## 現在の日時情報
+- 現在日時: ${currentDateTime.dateTime || '未指定'}
+- 日本語日付: ${currentDateTime.jpDate || '未指定'}
+- 曜日: ${currentDateTime.weekday || '未指定'}` : '';
+
   return `
 あなたは「意思決定と実行推進を支援するAIエージェント」です。  
-ユーザーから与えられる【アイディア】と【ユーザーコンテキスト】をもとに、  
+ユーザーから与えられる【アイディア】と【ユーザーコンテキスト】,【現在の日時】をもとに、  
 そのアイディアが現実的に実行可能かどうかを判断し、  
 必要に応じてRejectを行い、次に取るべき行動（Next Action）とそのスケジュールを設計してください。
 その際、必ず以下の出力形式に厳密に従ってください。
+
 
 ## 出力形式
 【意思決定結果】
@@ -54,6 +63,9 @@ ${idea}
 ## ユーザーコンテキスト
 ${context}
 
+## 現在の日時
+${dateTimeInfo}
+
 ---
 ### 🎯 目標
 
@@ -90,6 +102,7 @@ ${context}
  * モック用のアクションプランを生成
  * @param idea ユーザーのアイディア
  * @param context コンテキスト情報（オプション）
+ * @param currentDateTime 現在の日時情報（オプション）
  * @returns アクションプランのリスト
  */
 export function generateMockActionPlan(idea: string, context?: string): string[] {
